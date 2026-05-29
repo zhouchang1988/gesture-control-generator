@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>蝴蝶飞舞 · 手势控制</title>
+</head>
+<body>
+<script src="https://cdn.jsdelivr.net/npm/p5@1.9.4/lib/p5.min.js"></script>
+<script src="./gesture-scene.js"></script>
+<script>
+// ── 蝴蝶类 ──
+class Butterfly {
+  constructor(x, y, vx, vy) {
+    this.x = x;
+    this.y = y;
+    this.vx = vx * 0.2 + random(-0.5, 0.5);
+    this.vy = vy * 0.2 + random(-0.5, 0.5);
+    
+    // 翅膀参数
+    this.wingAngle = 0;
+    this.wingSpeed = random(0.08, 0.15);
+    this.wingSize = random(12, 22);
+    
+    // 颜色
+    this.hue = random(0, 360);
+    this.sat = random(60, 100);
+    this.bri = random(70, 100);
+    
+    // 生命周期
+    this.alpha = 100;
+    this.fade = random(0.3, 0.8);
+    
+    // 随机扰动
+    this.wobblePhase = random(TWO_PI);
+    this.wobbleSpeed = random(0.02, 0.05);
+    this.wobbleAmp = random(0.3, 0.8);
+    
+    // 旋转
+    this.angle = atan2(vy, vx);
+  }
+
+  update() {
+    // 扇动翅膀
+    this.wingAngle += this.wingSpeed;
+    
+    // 随机扰动
+    this.wobblePhase += this.wobbleSpeed;
+    const wobbleX = sin(this.wobblePhase) * this.wobbleAmp;
+    const wobbleY = cos(this.wobblePhase * 1.3) * this.wobbleAmp;
+    
+    // 更新位置
+    this.vx += wobbleX * 0.1;
+    this.vy += wobbleY * 0.1;
+    this.vx *= 0.98;
+    this.vy *= 0.98;
+    this.x += this.vx;
+    this.y += this.vy;
+    
+    // 更新朝向
+    if (abs(this.vx) > 0.1 || abs(this.vy) > 0.1) {
+      this.angle = lerp(this.angle, atan2(this.vy, this.vx), 0.1);
+    }
+    
+    // 生命周期
+    this.alpha -= this.fade;
+  }
+
+  draw() {
+    const a = max(this.alpha, 0);
+    push();
+    translate(this.x, this.y);
+    rotate(this.angle);
+    
+    // 翅膀开合程度
+    const wingFlap = sin(this.wingAngle) * 0.8 + 0.2;
+    
+    noStroke();
+    
+    // 左翅
+    push();
+    scale(1, wingFlap);
+    fill(this.hue, this.sat, this.bri, a);
+    beginShape();
+    vertex(0, 0);
+    bezierVertex(-this.wingSize * 0.5, -this.wingSize * 0.8, 
+                 -this.wingSize, -this.wingSize * 0.3, 
+                 -this.wingSize * 0.7, 0);
+    bezierVertex(-this.wingSize, this.wingSize * 0.3, 
+                 -this.wingSize * 0.5, this.wingSize * 0.8, 
+                 0, 0);
+    endShape(CLOSE);
+    
+    // 左翅内侧
+    fill((this.hue + 30) % 360, this.sat * 0.8, this.bri * 1.2, a * 0.7);
+    beginShape();
+    vertex(0, 0);
+    bezierVertex(-this.wingSize * 0.3, -this.wingSize * 0.5, 
+                 -this.wingSize * 0.6, -this.wingSize * 0.2, 
+                 -this.wingSize * 0.4, 0);
+    bezierVertex(-this.wingSize * 0.6, this.wingSize * 0.2, 
+                 -this.wingSize * 0.3, this.wingSize * 0.5, 
+                 0, 0);
+    endShape(CLOSE);
+    pop();
+    
+    // 右翅
+    push();
+    scale(1, wingFlap);
+    fill(this.hue, this.sat, this.bri, a);
+    beginShape();
+    vertex(0, 0);
+    bezierVertex(this.wingSize * 0.5, -this.wingSize * 0.8, 
+                 this.wingSize, -this.wingSize * 0.3, 
+                 this.wingSize * 0.7, 0);
+    bezierVertex(this.wingSize, this.wingSize * 0.3, 
+                 this.wingSize * 0.5, this.wingSize * 0.8, 
+                 0, 0);
+    endShape(CLOSE);
+    
+    // 右翅内侧
+    fill((this.hue + 30) % 360, this.sat * 0.8, this.bri * 1.2, a * 0.7);
+    beginShape();
+    vertex(0, 0);
+    bezierVertex(this.wingSize * 0.3, -this.wingSize * 0.5, 
+                 this.wingSize * 0.6, -this.wingSize * 0.2, 
+                 this.wingSize * 0.4, 0);
+    bezierVertex(this.wingSize * 0.6, this.wingSize * 0.2, 
+                 this.wingSize * 0.3, this.wingSize * 0.5, 
+                 0, 0);
+    endShape(CLOSE);
+    pop();
+    
+    // 身体
+    fill(this.hue * 0.3, this.sat * 0.5, this.bri * 0.6, a);
+    ellipse(0, 0, 4, this.wingSize * 0.4);
+    
+    // 触角
+    stroke(this.hue * 0.3, this.sat * 0.5, this.bri * 0.6, a);
+    strokeWeight(1);
+    noFill();
+    bezier(-1, -this.wingSize * 0.15, 
+           -this.wingSize * 0.3, -this.wingSize * 0.5, 
+           -this.wingSize * 0.2, -this.wingSize * 0.7, 
+           -this.wingSize * 0.15, -this.wingSize * 0.6);
+    bezier(1, -this.wingSize * 0.15, 
+           this.wingSize * 0.3, -this.wingSize * 0.5, 
+           this.wingSize * 0.2, -this.wingSize * 0.7, 
+           this.wingSize * 0.15, -this.wingSize * 0.6);
+    
+    pop();
+  }
+
+  isDead() {
+    return this.alpha <= 0;
+  }
+}
+
+// ── 创建场景 ──
+const scene = new GestureScene({
+  title: '蝴蝶飞舞 · 手势控制',
+  create: (x, y, vx, vy) => new Butterfly(x, y, vx, vy),
+  spawnRate: 1,
+  burstRate: 5,
+  maxObjects: 200,
+  background: [220, 30, 8, 16],
+  handVelocityScale: 1.2,
+});
+</script>
+</body>
+</html>

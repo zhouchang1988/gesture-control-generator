@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>粒子拖尾 · 手势控制</title>
+</head>
+<body>
+<script src="https://cdn.jsdelivr.net/npm/p5@1.9.4/lib/p5.min.js"></script>
+<script src="./gesture-scene.js"></script>
+<script>
+// ── 粒子配置 ──
+const CFG = {
+  gravity: 0.02,
+  drag: 0.985,
+  fadeBase: 3.5,
+  fadeVar: 2,
+  sizeMin: 2,
+  sizeMax: 7,
+  hueMin: 0,
+  hueMax: 360,
+  glowThreshold: 4.5,
+};
+
+// ── 粒子类 ──
+class Particle {
+  constructor(x, y, vx, vy) {
+    this.x = x;
+    this.y = y;
+    this.vx = vx * 0.35 + random(-1.2, 1.2);
+    this.vy = vy * 0.35 + random(-1.2, 1.2);
+    this.ax = 0;
+    this.ay = CFG.gravity;
+    this.r = random(CFG.sizeMin, CFG.sizeMax);
+    this.hue = random(CFG.hueMin, CFG.hueMax);
+    this.sat = random(65, 100);
+    this.bri = random(75, 100);
+    this.alpha = 100;
+    this.fade = CFG.fadeBase + random(-CFG.fadeVar, CFG.fadeVar);
+    this.fade += map(this.r, CFG.sizeMin, CFG.sizeMax, 1.5, -0.5);
+  }
+
+  update() {
+    this.vx += this.ax;
+    this.vy += this.ay;
+    this.vx *= CFG.drag;
+    this.vy *= CFG.drag;
+    this.x += this.vx;
+    this.y += this.vy;
+    this.alpha -= this.fade;
+  }
+
+  draw() {
+    const a = max(this.alpha, 0);
+    noStroke();
+    if (this.r > CFG.glowThreshold && a > 20) {
+      fill(this.hue, this.sat, this.bri, a * 0.12);
+      ellipse(this.x, this.y, this.r * 5);
+    }
+    fill(this.hue, this.sat, this.bri, a);
+    ellipse(this.x, this.y, this.r * 2);
+  }
+
+  isDead() {
+    return this.alpha <= 0;
+  }
+}
+
+// ── 创建场景 ──
+const scene = new GestureScene({
+  title: '粒子拖尾 · 手势控制',
+  create: (x, y, vx, vy) => new Particle(x, y, vx, vy),
+  spawnRate: 3,
+  burstRate: 14,
+  maxObjects: 4000,
+});
+</script>
+</body>
+</html>

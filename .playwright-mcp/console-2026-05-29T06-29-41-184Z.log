@@ -1,0 +1,1 @@
+[     286ms] [WARNING] 摄像头权限检测失败: NotAllowedError: Permission denied @ http://localhost:8765/assets/gesture-scene.js:468

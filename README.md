@@ -1,0 +1,190 @@
+# 手势控制生成器
+
+生成手势控制交互场景的 Claude Code 技能。询问用户想要控制什么，然后输出一个完整的 HTML 文件，支持鼠标/手势双模式输入。
+
+## 功能特点
+
+- 🎯 **鼠标/手势双模式** - 自动切换，摄像头不可用时降级到纯鼠标控制
+- 🎨 **丰富的视觉效果** - 粒子、蝴蝶、水波纹等多种预设效果
+- 📱 **响应式设计** - 支持桌面和移动设备
+- ⚡ **高性能** - 优化的渲染引擎，支持数千个物体
+- 🔧 **易于扩展** - 简单的类接口，轻松创建自定义效果
+
+## 项目结构
+
+```
+gesture-control-generator/
+├── SKILL.md              # 技能定义文件
+├── assets/               # 资源文件
+│   ├── gesture-scene.js  # 核心框架
+│   └── template.html     # HTML 模板
+├── references/           # 参考示例
+│   ├── particles.html    # 粒子拖尾
+│   ├── butterfly.html    # 蝴蝶飞舞
+│   └── ripple.html       # 水波纹
+├── scripts/              # 脚本文件
+├── tests/                # 测试报告
+└── index.html            # 示例列表页
+```
+
+## 快速开始
+
+### 1. 安装技能
+
+将此目录软链接到 Claude Code 技能目录：
+
+```bash
+# Claude Code
+ln -s /path/to/gesture-control-generator ~/.claude/skills/gesture-control-generator
+
+# OpenCode
+ln -s /path/to/gesture-control-generator ~/.opencode/skills/gesture-control-generator
+```
+
+### 2. 使用技能
+
+在 Claude Code 中，直接描述你想要的手势控制效果：
+
+```
+我想做一个星星闪烁的手势控制效果
+```
+
+或者：
+
+```
+生成一个烟花绽放的手势控制场景
+```
+
+### 3. 打开效果
+
+生成的 HTML 文件可以直接在浏览器中打开，支持：
+- 鼠标移动控制物体生成
+- 鼠标按下触发爆发效果
+- 点击右上角按钮开启摄像头手势控制
+
+## 示例效果
+
+打开 `index.html` 查看所有示例，或直接访问：
+
+| 效果 | 文件 | 描述 |
+|------|------|------|
+| ✨ 粒子拖尾 | `references/particles.html` | 经典粒子效果，彩色拖尾 |
+| 🦋 蝴蝶飞舞 | `references/butterfly.html` | 翅膀扇动，随机飞舞 |
+| 💧 水波纹 | `references/ripple.html` | 涟漪扩散，多层叠加 |
+
+## 创建自定义效果
+
+### 物体类接口
+
+每个物体类需要实现以下方法：
+
+```javascript
+class MyObject {
+  constructor(x, y, vx, vy) {
+    // x, y: 生成位置（来自手指/鼠标）
+    // vx, vy: 初始速度（来自移动方向）
+    this.x = x;
+    this.y = y;
+    // 初始化其他属性...
+  }
+  
+  update() {
+    // 更新位置、状态（每帧调用）
+  }
+  
+  draw() {
+    // 使用 p5.js 函数渲染物体
+    // 常用函数：noStroke(), fill(), ellipse(), rect()
+  }
+  
+  isDead() {
+    // 返回 true 表示物体应该被移除
+    return this.alpha <= 0;
+  }
+}
+```
+
+### 场景配置
+
+```javascript
+const scene = new GestureScene({
+  title: '我的效果 · 手势控制',
+  create: (x, y, vx, vy) => new MyObject(x, y, vx, vy),
+  spawnRate: 2,      // 每帧生成数量 (1-5)
+  burstRate: 8,      // 爆发数量 (3-15)
+  maxObjects: 500,   // 物体上限 (100-5000)
+  background: [220, 50, 5, 15],  // 背景色 [h, s, b, a]
+  handVelocityScale: 1.5,        // 手势速度缩放
+});
+```
+
+### 配置指南
+
+| 效果类型 | spawnRate | burstRate | maxObjects | handVelocityScale |
+|----------|-----------|-----------|------------|-------------------|
+| 单个大物体（蝴蝶、花） | 1 | 3-5 | 100-200 | 1.0-1.5 |
+| 中等密度（萤火虫、雪花） | 2-3 | 5-8 | 300-500 | 1.2-1.8 |
+| 高密度（粒子、雨滴） | 3-5 | 10-15 | 1000-4000 | 1.5-2.0 |
+| 波纹类（水波纹、声波） | 1 | 2-3 | 50-100 | 0.8-1.2 |
+
+## 常见效果示例
+
+### 星星闪烁
+
+```javascript
+class Star {
+  constructor(x, y, vx, vy) {
+    this.x = x;
+    this.y = y;
+    this.vx = vx * 0.3 + random(-0.5, 0.5);
+    this.vy = vy * 0.3 + random(-0.5, 0.5);
+    this.size = random(3, 8);
+    this.hue = random(40, 60); // 金黄色
+    this.alpha = 100;
+    this.fade = random(0.5, 1.5);
+  }
+  // ... update(), draw(), isDead()
+}
+```
+
+### 烟花绽放
+
+```javascript
+class Firework {
+  constructor(x, y, vx, vy) {
+    this.x = x;
+    this.y = y;
+    this.phase = 'rise'; // 上升阶段
+    this.vy = -random(3, 6); // 向上
+    this.explosionParticles = [];
+  }
+  // 上升 → 爆炸 → 粒子扩散
+}
+```
+
+## 技术栈
+
+- **p5.js** - 创意编程框架，用于图形渲染
+- **MediaPipe** - Google 的手势识别库（可选）
+- **GestureScene** - 核心框架，处理输入和场景管理
+
+## 降级模式
+
+当摄像头不可用或用户拒绝授权时，GestureScene 自动降级到纯鼠标模式：
+
+- 显示"鼠标控制中（摄像头不可用）"
+- 鼠标移动生成物体，按住鼠标触发爆发
+- 所有视觉效果正常工作，仅缺少手势控制
+
+## 性能调优
+
+| 设备类型 | maxObjects | spawnRate | burstRate |
+|----------|------------|-----------|-----------|
+| 高端 PC | 3000-5000 | 3-5 | 10-15 |
+| 中端笔记本 | 1000-2000 | 2-3 | 8-10 |
+| 低端设备 | 300-800 | 1-2 | 5-8 |
+| 移动浏览器 | 200-500 | 1-2 | 3-5 |
+
+## 许可证
+
+MIT License

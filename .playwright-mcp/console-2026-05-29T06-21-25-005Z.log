@@ -1,0 +1,8 @@
+[    2041ms] [ERROR] Failed to load resource: the server responded with a status of 404 (File not found) @ http://localhost:8765/favicon.ico:0
+[    2064ms] ReferenceError: random is not defined
+    at new Particle (http://localhost:8765/references/particles.html:30:18)
+    at Object.create (http://localhost:8765/references/particles.html:72:29)
+    at GestureScene._spawnObjects (http://localhost:8765/assets/gesture-scene.js:343:39)
+    at p.draw (http://localhost:8765/assets/gesture-scene.js:243:14)
+    at e.default.redraw (https://cdn.jsdelivr.net/npm/p5@1.9.4/lib/p5.min.js:2:541675)
+    at _draw (https://cdn.jsdelivr.net/npm/p5@1.9.4/lib/p5.min.js:2:465662)
