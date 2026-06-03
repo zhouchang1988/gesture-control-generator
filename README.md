@@ -7,7 +7,7 @@
 - 🎯 **鼠标/手势双模式** - 自动切换，摄像头不可用时降级到纯鼠标控制
 - 🎨 **丰富的视觉效果** - 粒子、蝴蝶、水波纹等多种预设效果
 - 📱 **响应式设计** - 支持桌面和移动设备
-- ⚡ **高性能** - 优化的渲染引擎，支持数千个物体
+- ⚡ **高性能** - Three.js 渲染引擎，支持数万个物体
 - 🔧 **易于扩展** - 简单的类接口，轻松创建自定义效果
 
 ## 项目结构
@@ -16,7 +16,7 @@
 gesture-control-generator/
 ├── SKILL.md              # 技能定义文件
 ├── assets/               # 资源文件
-│   ├── gesture-scene.js  # 核心框架
+│   ├── gesture-scene.js  # 核心框架 (Three.js版本)
 │   └── template.html     # HTML 模板
 ├── references/           # 参考示例
 │   ├── particles.html    # 粒子拖尾
@@ -26,6 +26,12 @@ gesture-control-generator/
 ├── tests/                # 测试报告
 └── index.html            # 示例列表页
 ```
+
+## 技术栈
+
+- **Three.js** - 3D 渲染引擎，用于高性能图形渲染
+- **MediaPipe** - Google 的手势识别库（可选）
+- **GestureScene** - 核心框架，处理输入和场景管理
 
 ## 快速开始
 
@@ -83,18 +89,28 @@ class MyObject {
   constructor(x, y, vx, vy) {
     // x, y: 生成位置（来自手指/鼠标）
     // vx, vy: 初始速度（来自移动方向）
-    this.x = x;
-    this.y = y;
-    // 初始化其他属性...
+    
+    // 创建 Three.js 几何体和材质
+    const geometry = new THREE.SphereGeometry(size, 16, 16);
+    const material = new THREE.MeshBasicMaterial({
+      color: new THREE.Color().setHSL(hue, saturation, lightness),
+      transparent: true,
+      opacity: 1.0,
+    });
+    
+    // 创建网格
+    this.mesh = new THREE.Mesh(geometry, material);
+    this.mesh.position.set(x, y, 0);
   }
   
   update() {
     // 更新位置、状态（每帧调用）
-  }
-  
-  draw() {
-    // 使用 p5.js 函数渲染物体
-    // 常用函数：noStroke(), fill(), ellipse(), rect()
+    this.mesh.position.x += this.vx;
+    this.mesh.position.y += this.vy;
+    
+    // 更新透明度
+    this.alpha -= fadeRate;
+    this.mesh.material.opacity = Math.max(this.alpha, 0);
   }
   
   isDead() {
@@ -113,7 +129,7 @@ const scene = new GestureScene({
   spawnRate: 2,      // 每帧生成数量 (1-5)
   burstRate: 8,      // 爆发数量 (3-15)
   maxObjects: 500,   // 物体上限 (100-5000)
-  background: [220, 50, 5, 15],  // 背景色 [h, s, b, a]
+  background: [0.86, 0.2, 0.02],  // 背景色 [r, g, b] (0-1范围)
   handVelocityScale: 1.5,        // 手势速度缩放
 });
 ```
@@ -134,16 +150,27 @@ const scene = new GestureScene({
 ```javascript
 class Star {
   constructor(x, y, vx, vy) {
-    this.x = x;
-    this.y = y;
-    this.vx = vx * 0.3 + random(-0.5, 0.5);
-    this.vy = vy * 0.3 + random(-0.5, 0.5);
-    this.size = random(3, 8);
-    this.hue = random(40, 60); // 金黄色
-    this.alpha = 100;
-    this.fade = random(0.5, 1.5);
+    this.vx = vx * 0.3 + (Math.random() - 0.5);
+    this.vy = vy * 0.3 + (Math.random() - 0.5);
+    this.size = 3 + Math.random() * 5;
+    this.hue = 40 + Math.random() * 20; // 金黄色
+    this.alpha = 1.0;
+    this.fade = 0.005 + Math.random() * 0.01;
+    
+    // 创建星形几何体
+    const shape = new THREE.Shape();
+    // ... 定义星形顶点
+    const geometry = new THREE.ShapeGeometry(shape);
+    const material = new THREE.MeshBasicMaterial({
+      color: new THREE.Color().setHSL(this.hue / 360, 0.8, 0.8),
+      transparent: true,
+      opacity: this.alpha,
+    });
+    
+    this.mesh = new THREE.Mesh(geometry, material);
+    this.mesh.position.set(x, y, 0);
   }
-  // ... update(), draw(), isDead()
+  // ... update(), isDead()
 }
 ```
 
@@ -152,21 +179,24 @@ class Star {
 ```javascript
 class Firework {
   constructor(x, y, vx, vy) {
-    this.x = x;
-    this.y = y;
     this.phase = 'rise'; // 上升阶段
-    this.vy = -random(3, 6); // 向上
+    this.vy = -(3 + Math.random() * 3); // 向上
     this.explosionParticles = [];
+    
+    // 创建头部
+    const geometry = new THREE.SphereGeometry(2.5, 8, 8);
+    const material = new THREE.MeshBasicMaterial({
+      color: new THREE.Color().setHSL(Math.random(), 0.8, 1),
+      transparent: true,
+      opacity: 1.0,
+    });
+    
+    this.mesh = new THREE.Mesh(geometry, material);
+    this.mesh.position.set(x, y, 0);
   }
   // 上升 → 爆炸 → 粒子扩散
 }
 ```
-
-## 技术栈
-
-- **p5.js** - 创意编程框架，用于图形渲染
-- **MediaPipe** - Google 的手势识别库（可选）
-- **GestureScene** - 核心框架，处理输入和场景管理
 
 ## 降级模式
 

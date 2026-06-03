@@ -1,7 +1,7 @@
 ---
 name: gesture-control-generator
 description: 生成手势控制交互场景。询问用户想要控制什么，然后输出一个完整的 HTML 文件，支持鼠标/手势双模式输入。
-version: 1.0.0
+version: 2.0.0
 ---
 
 # 手势控制生成器
@@ -14,7 +14,7 @@ version: 1.0.0
 gesture-control/
 ├── SKILL.md              # 本文件
 ├── assets/               # 资源文件
-│   ├── gesture-scene.js  # 核心框架
+│   ├── gesture-scene.js  # 核心框架 (Three.js版本)
 │   └── template.html     # HTML 模板
 ├── references/           # 参考示例
 │   ├── particles.html    # 粒子拖尾
@@ -23,6 +23,12 @@ gesture-control/
 ├── scripts/              # 脚本文件
 └── index.html            # 示例列表页
 ```
+
+## 技术栈
+
+- **Three.js** - 3D 渲染引擎，用于高性能图形渲染
+- **MediaPipe** - Google 的手势识别库（可选）
+- **GestureScene** - 核心框架，处理输入和场景管理
 
 ## 必需文件
 
@@ -47,7 +53,7 @@ gesture-control/
 | `{每帧生成数量}` | spawnRate 参数 | 2 |
 | `{爆发数量}` | burstRate 参数 | 8 |
 | `{物体上限}` | maxObjects 参数 | 500 |
-| `{背景色}` | HSB 背景色数组 | 220, 50, 5, 15 |
+| `{背景色}` | RGB 背景色数组 (0-1范围) | 0.86, 0.2, 0.02 |
 | `{速度缩放}` | handVelocityScale 参数 | 1.5 |
 
 **注意**：生成的 HTML 文件直接引用 `./gesture-scene.js`，无需计算相对路径。
@@ -92,28 +98,42 @@ class MyObject {
     // 初始化位置、速度、外观
     // x, y: 生成位置（来自手指/鼠标）
     // vx, vy: 初始速度（来自移动方向）
+    
+    // 创建 Three.js 几何体和材质
+    const geometry = new THREE.SphereGeometry(size, 16, 16);
+    const material = new THREE.MeshBasicMaterial({
+      color: new THREE.Color().setHSL(hue, saturation, lightness),
+      transparent: true,
+      opacity: 1.0,
+    });
+    
+    // 创建网格
+    this.mesh = new THREE.Mesh(geometry, material);
+    this.mesh.position.set(x, y, 0);
   }
   
   update() {
     // 更新位置、动画、生命周期
     // 每帧调用
-  }
-  
-  draw() {
-    // 使用 p5.js 函数渲染物体
-    // 使用 noStroke(), fill(), ellipse(), rect() 等
+    this.mesh.position.x += this.vx;
+    this.mesh.position.y += this.vy;
+    
+    // 更新透明度
+    this.alpha -= fadeRate;
+    this.mesh.material.opacity = Math.max(this.alpha, 0);
   }
   
   isDead() {
     // 返回 true 表示物体应该被移除
     // 通常基于透明度或生命周期
+    return this.alpha <= 0;
   }
 }
 ```
 
 **设计指南：**
 
-1. **视觉效果**：让它更漂亮！使用 HSB 颜色模式获得鲜艳色彩
+1. **视觉效果**：让它更漂亮！使用 HSL 颜色模式获得鲜艳色彩
 2. **物理效果**：根据需要添加重力、阻力或自定义物理
 3. **动画效果**：包含旋转、缩放、颜色变化或粒子效果
 4. **生命周期**：物体应该自然淡出或消失
@@ -147,7 +167,7 @@ class MyObject {
   <title>{效果名称} · 手势控制</title>
 </head>
 <body>
-<script src="https://cdn.jsdelivr.net/npm/p5@1.9.4/lib/p5.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.149.0/build/three.min.js"></script>
 <script src="./gesture-scene.js"></script>
 <script>
 // ── {效果名称}类 ──
@@ -157,10 +177,6 @@ class {ClassName} {
   }
   
   update() {
-    // ... 实现
-  }
-  
-  draw() {
     // ... 实现
   }
   
@@ -176,7 +192,7 @@ const scene = new GestureScene({
   spawnRate: {rate},      // 每帧生成数量 (1-5)
   burstRate: {burst},     // 爆发数量 (3-15)
   maxObjects: {max},      // 物体上限 (100-5000)
-  background: [{bg}],     // 背景色 [h, s, b, a]
+  background: [{bg}],     // 背景色 [r, g, b] (0-1范围)
   handVelocityScale: {scale}, // 手势速度缩放
 });
 </script>
@@ -236,85 +252,103 @@ const scene = new GestureScene({
 ```javascript
 class Star {
   constructor(x, y, vx, vy) {
-    this.x = x;
-    this.y = y;
-    this.vx = vx * 0.3 + random(-0.5, 0.5);
-    this.vy = vy * 0.3 + random(-0.5, 0.5);
+    this.vx = vx * 0.3 + (Math.random() - 0.5);
+    this.vy = vy * 0.3 + (Math.random() - 0.5);
     
     // 星星属性
-    this.size = random(3, 8);
-    this.points = floor(random(4, 7)); // 4-6角星
-    this.innerRatio = random(0.3, 0.5);
+    this.size = 3 + Math.random() * 5;
+    this.points = Math.floor(4 + Math.random() * 3); // 4-6角星
+    this.innerRatio = 0.3 + Math.random() * 0.2;
     
     // 旋转
-    this.angle = random(TWO_PI);
-    this.rotSpeed = random(-0.05, 0.05);
+    this.angle = Math.random() * Math.PI * 2;
+    this.rotSpeed = (Math.random() - 0.5) * 0.1;
     
     // 闪烁
-    this.twinklePhase = random(TWO_PI);
-    this.twinkleSpeed = random(0.05, 0.15);
+    this.twinklePhase = Math.random() * Math.PI * 2;
+    this.twinkleSpeed = 0.05 + Math.random() * 0.1;
     
-    // 颜色
-    this.hue = random(40, 60); // 金黄色
-    this.sat = random(20, 60);
-    this.bri = random(80, 100);
+    // 颜色 (HSL)
+    this.hue = 40 + Math.random() * 20; // 金黄色
+    this.saturation = 0.2 + Math.random() * 0.4;
+    this.lightness = 0.8 + Math.random() * 0.2;
     
     // 生命周期
-    this.alpha = 100;
-    this.fade = random(0.5, 1.5);
+    this.alpha = 1.0;
+    this.fade = 0.005 + Math.random() * 0.01;
     
     // 发光
     this.glowSize = this.size * 3;
+    
+    // 创建星形几何体
+    const shape = new THREE.Shape();
+    for (let i = 0; i < this.points * 2; i++) {
+      const r = i % 2 === 0 ? this.size : this.size * this.innerRatio;
+      const ang = (i * Math.PI) / this.points - Math.PI / 2;
+      const px = Math.cos(ang) * r;
+      const py = Math.sin(ang) * r;
+      if (i === 0) shape.moveTo(px, py);
+      else shape.lineTo(px, py);
+    }
+    shape.closePath();
+    
+    const geometry = new THREE.ShapeGeometry(shape);
+    const material = new THREE.MeshBasicMaterial({
+      color: new THREE.Color().setHSL(this.hue / 360, this.saturation, this.lightness),
+      transparent: true,
+      opacity: this.alpha,
+      side: THREE.DoubleSide,
+    });
+    
+    this.mesh = new THREE.Mesh(geometry, material);
+    this.mesh.position.set(x, y, 0);
+    
+    // 发光效果
+    const glowGeometry = new THREE.CircleGeometry(this.glowSize, 32);
+    const glowMaterial = new THREE.MeshBasicMaterial({
+      color: new THREE.Color().setHSL(this.hue / 360, this.saturation * 0.5, this.lightness),
+      transparent: true,
+      opacity: this.alpha * 0.15,
+    });
+    
+    this.glowMesh = new THREE.Mesh(glowGeometry, glowMaterial);
+    this.mesh.add(this.glowMesh);
+    
+    // 中心亮点
+    const centerGeometry = new THREE.CircleGeometry(this.size * 0.2, 16);
+    const centerMaterial = new THREE.MeshBasicMaterial({
+      color: new THREE.Color().setHSL(0, 0, 1),
+      transparent: true,
+      opacity: this.alpha * 0.8,
+    });
+    
+    this.centerMesh = new THREE.Mesh(centerGeometry, centerMaterial);
+    this.mesh.add(this.centerMesh);
   }
 
   update() {
     // 移动
-    this.x += this.vx;
-    this.y += this.vy;
+    this.mesh.position.x += this.vx;
+    this.mesh.position.y += this.vy;
     this.vx *= 0.98;
     this.vy *= 0.98;
-    this.vy -= 0.02; // 轻微上浮
+    this.vy += 0.02; // 轻微上浮
     
     // 旋转
-    this.angle += this.rotSpeed;
+    this.mesh.rotation.z += this.rotSpeed;
     
     // 闪烁
     this.twinklePhase += this.twinkleSpeed;
+    const twinkle = Math.sin(this.twinklePhase) * 0.3 + 0.7;
     
     // 生命周期
     this.alpha -= this.fade;
-  }
-
-  draw() {
-    const a = max(this.alpha, 0);
-    const twinkle = sin(this.twinklePhase) * 0.3 + 0.7;
-    const currentAlpha = a * twinkle;
     
-    push();
-    translate(this.x, this.y);
-    rotate(this.angle);
-    
-    // 发光效果
-    noStroke();
-    fill(this.hue, this.sat * 0.5, this.bri, currentAlpha * 0.15);
-    ellipse(0, 0, this.glowSize * 2);
-    ellipse(0, 0, this.glowSize * 1.5);
-    
-    // 绘制星形
-    fill(this.hue, this.sat, this.bri, currentAlpha);
-    beginShape();
-    for (let i = 0; i < this.points * 2; i++) {
-      const r = i % 2 === 0 ? this.size : this.size * this.innerRatio;
-      const ang = (i * PI) / this.points - HALF_PI;
-      vertex(cos(ang) * r, sin(ang) * r);
-    }
-    endShape(CLOSE);
-    
-    // 中心亮点
-    fill(0, 0, 100, currentAlpha * 0.8);
-    ellipse(0, 0, this.size * 0.4);
-    
-    pop();
+    // 更新透明度
+    const currentAlpha = Math.max(this.alpha, 0) * twinkle;
+    this.mesh.material.opacity = currentAlpha;
+    this.glowMesh.material.opacity = currentAlpha * 0.15;
+    this.centerMesh.material.opacity = currentAlpha * 0.8;
   }
 
   isDead() {
@@ -331,7 +365,7 @@ const scene = new GestureScene({
   spawnRate: 2,
   burstRate: 8,
   maxObjects: 500,
-  background: [220, 50, 5, 15],
+  background: [0.86, 0.2, 0.02],
   handVelocityScale: 1.5,
 });
 ```
@@ -345,34 +379,46 @@ const scene = new GestureScene({
 ```javascript
 class Firework {
   constructor(x, y, vx, vy) {
-    this.x = x;
-    this.y = y;
-    
     // 烟花阶段: 上升 or 爆炸
     this.phase = 'rise';
     this.vx = vx * 0.2;
-    this.vy = -random(3, 6); // 向上
+    this.vy = -(3 + Math.random() * 3); // 向上
     
     // 爆炸参数
     this.explosionParticles = [];
-    this.explosionHue = random(0, 360);
+    this.explosionHue = Math.random() * 360;
     
     // 上升轨迹
     this.trail = [];
     
     // 生命周期
-    this.alpha = 100;
-    this.fade = 0.3;
+    this.alpha = 1.0;
+    this.fade = 0.003;
+    
+    // 创建头部
+    const geometry = new THREE.SphereGeometry(2.5, 8, 8);
+    const material = new THREE.MeshBasicMaterial({
+      color: new THREE.Color().setHSL(this.explosionHue / 360, 0.8, 1),
+      transparent: true,
+      opacity: this.alpha,
+    });
+    
+    this.mesh = new THREE.Mesh(geometry, material);
+    this.mesh.position.set(x, y, 0);
   }
 
   update() {
     if (this.phase === 'rise') {
       // 上升阶段
-      this.trail.push({ x: this.x, y: this.y, alpha: 80 });
+      this.trail.push({ 
+        x: this.mesh.position.x, 
+        y: this.mesh.position.y, 
+        alpha: 0.8 
+      });
       if (this.trail.length > 10) this.trail.shift();
       
-      this.x += this.vx;
-      this.y += this.vy;
+      this.mesh.position.x += this.vx;
+      this.mesh.position.y += this.vy;
       this.vy += 0.05; // 重力
       
       // 速度很慢时爆炸
@@ -383,12 +429,13 @@ class Firework {
     } else {
       // 爆炸阶段
       for (let p of this.explosionParticles) {
-        p.x += p.vx;
-        p.y += p.vy;
+        p.mesh.position.x += p.vx;
+        p.mesh.position.y += p.vy;
         p.vy += 0.03; // 重力
         p.vx *= 0.98; // 阻力
         p.vy *= 0.98;
         p.alpha -= p.fade;
+        p.mesh.material.opacity = Math.max(p.alpha, 0);
       }
       
       // 移除死亡粒子
@@ -398,47 +445,37 @@ class Firework {
         this.alpha = 0;
       }
     }
+    
+    // 更新头部透明度
+    this.mesh.material.opacity = Math.max(this.alpha, 0);
   }
 
   explode() {
-    const count = floor(random(30, 50));
+    const count = Math.floor(30 + Math.random() * 20);
     for (let i = 0; i < count; i++) {
-      const angle = random(TWO_PI);
-      const speed = random(1, 4);
-      this.explosionParticles.push({
-        x: this.x,
-        y: this.y,
-        vx: cos(angle) * speed,
-        vy: sin(angle) * speed,
-        alpha: 100,
-        fade: random(0.5, 1.5),
-        size: random(2, 5),
-        hue: this.explosionHue + random(-20, 20),
-      });
-    }
-  }
-
-  draw() {
-    if (this.phase === 'rise') {
-      // 绘制上升轨迹
-      noStroke();
-      for (let i = 0; i < this.trail.length; i++) {
-        const t = this.trail[i];
-        const a = map(i, 0, this.trail.length, 20, 80);
-        fill(this.explosionHue, 80, 100, a);
-        ellipse(t.x, t.y, 3);
-      }
+      const angle = Math.random() * Math.PI * 2;
+      const speed = 1 + Math.random() * 3;
       
-      // 绘制头部
-      fill(this.explosionHue, 80, 100, 100);
-      ellipse(this.x, this.y, 5);
-    } else {
-      // 绘制爆炸粒子
-      noStroke();
-      for (let p of this.explosionParticles) {
-        fill(p.hue, 80, 100, p.alpha);
-        ellipse(p.x, p.y, p.size);
-      }
+      const geometry = new THREE.SphereGeometry(1 + Math.random() * 2, 8, 8);
+      const material = new THREE.MeshBasicMaterial({
+        color: new THREE.Color().setHSL((this.explosionHue + (Math.random() - 0.5) * 40) / 360, 0.8, 1),
+        transparent: true,
+        opacity: 1.0,
+      });
+      
+      const mesh = new THREE.Mesh(geometry, material);
+      mesh.position.copy(this.mesh.position);
+      
+      this.explosionParticles.push({
+        mesh,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
+        alpha: 1.0,
+        fade: 0.005 + Math.random() * 0.01,
+      });
+      
+      // 添加到场景
+      scene.scene.add(mesh);
     }
   }
 
@@ -456,7 +493,7 @@ const scene = new GestureScene({
   spawnRate: 1,
   burstRate: 3,
   maxObjects: 100,
-  background: [240, 60, 3, 25],
+  background: [0.02, 0.02, 0.05],
   handVelocityScale: 1.0,
 });
 ```
@@ -467,7 +504,7 @@ const scene = new GestureScene({
 2. **添加细节**：发光、旋转、颜色变化
 3. **调整物理**：调整重力、阻力、速度
 4. **限制数量**：太多物体会变慢
-5. **使用 HSB**：更容易创建和谐的颜色
+5. **使用 HSL**：更容易创建和谐的颜色
 6. **添加随机性**：让效果更自然
 7. **考虑层次**：背景 + 主体 + 前景
 
@@ -514,22 +551,22 @@ const scene = new GestureScene({
 ### 性能优化技巧
 
 1. **减少物体数量**：降低 `maxObjects` 是最直接的方式
-2. **简化绘制**：用 `ellipse()` 代替 `bezier()`，减少 `beginShape()` 顶点
+2. **简化几何体**：使用低多边形几何体（如 SphereGeometry 的 segments 参数）
 3. **降低透明度计算**：预计算颜色值，避免每帧重复计算
-4. **使用 `noStroke()`**：减少渲染开销
+4. **使用 InstancedMesh**：对于大量相同物体，使用实例化渲染
 5. **限制发光效果**：只对大物体使用发光（glow）
 
 ## 故障排除
 
 **效果太慢：**
 - 减少 `maxObjects`
-- 简化 `draw()` 方法
-- 使用更简单的形状（用 ellipse 代替 bezier）
+- 简化几何体（减少顶点数）
+- 使用更简单的材质（MeshBasicMaterial 代替 MeshStandardMaterial）
 
 **效果不显示：**
 - 检查 `isDead()` 逻辑
 - 确认 `alpha` 已初始化
-- 确保 `draw()` 使用正确的 alpha
+- 确保材质设置了 `transparent: true`
 
 **移动感觉不对：**
 - 调整 `handVelocityScale`

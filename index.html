@@ -140,24 +140,33 @@
   <div class="usage">
     <h2>如何创建新手势控制场景</h2>
     <pre><code><span class="comment">&lt;!-- 引入依赖 --&gt;</span>
-&lt;script src=<span class="string">"https://cdn.jsdelivr.net/npm/p5@1.9.4/lib/p5.min.js"</span>&gt;&lt;/script&gt;
+&lt;script src=<span class="string">"https://cdn.jsdelivr.net/npm/three@0.149.0/build/three.min.js"</span>&gt;&lt;/script&gt;
 &lt;script src=<span class="string">"gesture-scene.js"</span>&gt;&lt;/script&gt;
 
 &lt;script&gt;
-<span class="comment">// 定义你的物体类，只需实现三个方法</span>
+<span class="comment">// 定义你的物体类，只需实现两个方法</span>
 <span class="keyword">class</span> <span class="func">MyObject</span> {
   <span class="func">constructor</span>(x, y, vx, vy) {
-    <span class="keyword">this</span>.x = x;
-    <span class="keyword">this</span>.y = y;
-    <span class="comment">// ... 初始化</span>
+    <span class="comment">// 创建 Three.js 几何体和材质</span>
+    <span class="keyword">const</span> geometry = <span class="keyword">new</span> THREE.<span class="func">SphereGeometry</span>(10, 16, 16);
+    <span class="keyword">const</span> material = <span class="keyword">new</span> THREE.<span class="func">MeshBasicMaterial</span>({
+      color: <span class="keyword">new</span> THREE.<span class="func">Color</span>().<span class="func">setHSL</span>(0.5, 0.8, 0.6),
+      transparent: <span class="keyword">true</span>,
+      opacity: 1.0,
+    });
+    
+    <span class="comment">// 创建网格</span>
+    <span class="keyword">this</span>.mesh = <span class="keyword">new</span> THREE.<span class="func">Mesh</span>(geometry, material);
+    <span class="keyword">this</span>.mesh.position.<span class="func">set</span>(x, y, 0);
+    <span class="keyword">this</span>.alpha = 1.0;
   }
   
   <span class="func">update</span>() {
     <span class="comment">// 更新位置、状态</span>
-  }
-  
-  <span class="func">draw</span>() {
-    <span class="comment">// 渲染物体</span>
+    <span class="keyword">this</span>.mesh.position.x += <span class="keyword">this</span>.vx;
+    <span class="keyword">this</span>.mesh.position.y += <span class="keyword">this</span>.vy;
+    <span class="keyword">this</span>.alpha -= 0.01;
+    <span class="keyword">this</span>.mesh.material.opacity = Math.<span class="func">max</span>(<span class="keyword">this</span>.alpha, 0);
   }
   
   <span class="func">isDead</span>() {
@@ -173,6 +182,7 @@
   spawnRate: 3,      <span class="comment">// 每帧生成数量</span>
   burstRate: 10,     <span class="comment">// 鼠标按下时的爆发数量</span>
   maxObjects: 2000,  <span class="comment">// 物体上限</span>
+  background: [0.02, 0.02, 0.05],  <span class="comment">// 背景色 [r, g, b]</span>
 });
 &lt;/script&gt;</code></pre>
   </div>
