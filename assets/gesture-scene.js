@@ -40,8 +40,10 @@ class GestureScene {
       background: config.background ?? [0.02, 0.02, 0.05],
       handVelocityScale: config.handVelocityScale ?? 1.8,
       handCooldownMs: config.handCooldownMs ?? 500,
+      handSpawnRate: config.handSpawnRate ?? 2,
+      handBurstSpeed: config.handBurstSpeed ?? 15,
       title: config.title ?? '手势控制',
-      velocitySmoothing: config.velocitySmoothing ?? 0.6,
+      velocitySmoothing: config.velocitySmoothing ?? 0.35,
       minMoveDist: config.minMoveDist ?? 1.5,
     };
 
@@ -51,6 +53,8 @@ class GestureScene {
     this.pmy = 0;
     this.smvx = 0;
     this.smvy = 0;
+    this.rawvx = 0;
+    this.rawvy = 0;
     this.handDetected = false;
     this.handX = 0;
     this.handY = 0;
@@ -334,9 +338,14 @@ class GestureScene {
         rawVx = 0;
         rawVy = 0;
       }
-      this.smvx = this.smvx * (1 - this.config.velocitySmoothing) + rawVx * this.config.velocitySmoothing;
-      this.smvy = this.smvy * (1 - this.config.velocitySmoothing) + rawVy * this.config.velocitySmoothing;
+      this.rawvx = rawVx;
+      this.rawvy = rawVy;
+      const sf = Math.min(this.config.velocitySmoothing, 0.35);
+      this.smvx = this.smvx * (1 - sf) + rawVx * sf;
+      this.smvy = this.smvy * (1 - sf) + rawVy * sf;
     } else {
+      this.rawvx = rawVx;
+      this.rawvy = rawVy;
       this.smvx = rawVx;
       this.smvy = rawVy;
     }
@@ -346,9 +355,11 @@ class GestureScene {
     const vx = this.inputMode === 'hand' ? this.smvx * this.config.handVelocityScale : this.smvx;
     const vy = this.inputMode === 'hand' ? this.smvy * this.config.handVelocityScale : this.smvy;
 
+    const detectVx = this.inputMode === 'hand' ? this.rawvx : this.smvx;
+    const detectVy = this.inputMode === 'hand' ? this.rawvy : this.smvy;
     const hasMotion = this.inputMode === 'hand'
-      ? (Math.abs(vx) > 0.5 || Math.abs(vy) > 0.5)
-      : (vx !== 0 || vy !== 0);
+      ? (Math.abs(detectVx) > 0.5 || Math.abs(detectVy) > 0.5)
+      : (detectVx !== 0 || detectVy !== 0);
 
     if (hasMotion) {
       let rate = this.config.spawnRate;
@@ -356,14 +367,17 @@ class GestureScene {
         rate = this.config.burstRate;
       }
       if (this.inputMode === 'hand') {
+        rate = this.config.handSpawnRate;
         const speed = Math.sqrt(vx * vx + vy * vy);
-        if (speed > 5) rate = this.config.burstRate;
+        if (speed > this.config.handBurstSpeed) rate = this.config.burstRate;
       }
 
       for (let i = 0; i < rate; i++) {
         const t = rate > 1 ? i / (rate - 1) : 0.5;
-        const px = this.pmx + (this.cursorX - this.pmx) * t;
-        const py = this.pmy + (this.cursorY - this.pmy) * t;
+        const bias = this.inputMode === 'hand' ? 0.85 : 0.5;
+        const interpT = t * bias;
+        const px = this.pmx + (this.cursorX - this.pmx) * interpT;
+        const py = this.pmy + (this.cursorY - this.pmy) * interpT;
         
         const obj = this.config.create(px, py, vx, vy);
         if (obj && obj.mesh) {
